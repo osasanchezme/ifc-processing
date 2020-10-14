@@ -55,7 +55,7 @@ def writeLines(lines, file_name, mode = "w"):
     print(f"Successfully exported the lines to: {file_name}")
 
 def idealizeBeam(elementLines, floor_nodes):
-    """Generates the idealized line for the given element (beam), top-middle line in the longest direction.
+    """Generates the idealized line for the given element (beam), top-middle line in the longest direction. Works only for horizontal beams
 
     Args:
         elementLines (list): List containing all the lines ((xi,yi,zi), (xj,yj,zj)) that define the element's geometry
@@ -90,18 +90,32 @@ def idealizeBeam(elementLines, floor_nodes):
             candidate = (init_point, end_point)
             if calcLength(candidate) > calcLength(idealBeam):
                 idealBeam = candidate
+
     # Round the nodes to 8 decimal points
     # init_point = list(idealBeam[0])
     # end_point = list(idealBeam[1])
     # init_point = [round(number, 8) for number in init_point]
     # end_point = [round(number, 8) for number in end_point]
+
     key_n = str(round(idealBeam[0][2],2))
     if key_n == '-0.0' : key_n = '0.0'
 
+    init_dist = calcLength((floor_nodes[key_n][0], idealBeam[0]))
+    end_dist = calcLength((floor_nodes[key_n][0], idealBeam[1]))
+
     for node in floor_nodes[key_n]:
-        pass
-        # print(calcLength()) Here I am
-    return (tuple(init_point), tuple(end_point))
+        # Calculations for initial point
+        candidate_init_dist = calcLength((node, idealBeam[0]))
+        if candidate_init_dist <= init_dist:
+            init_dist = candidate_init_dist
+            init_point = node
+        # Calculations for end point
+        candidate_end_dist = calcLength((node, idealBeam[1]))
+        if candidate_end_dist <= end_dist:
+            end_dist = candidate_end_dist
+            end_point = node
+
+    return (init_point, end_point)
 
 def idealizeColumn(elementLines):
     """Generates the idealized line for the given element (column), center-middle line in the vertical direction.
