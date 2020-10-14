@@ -54,11 +54,12 @@ def writeLines(lines, file_name, mode = "w"):
         f.close()
     print(f"Successfully exported the lines to: {file_name}")
 
-def idealizeBeam(elementLines):
-    """Generates the idealized line for the given element (beam), top-middle line in the longest direction.
+def idealizeBeam(elementLines, floor_nodes):
+    """Generates the idealized line for the given element (beam), top-middle line in the longest direction. Works only for horizontal beams
 
     Args:
         elementLines (list): List containing all the lines ((xi,yi,zi), (xj,yj,zj)) that define the element's geometry
+        floor_nodes (dict): dictionary containing one entry per floor and all the nodes for each floor
     Returns:
         tuple: Tuple containing coords ((xi,yi,zi),(xj,yj,zj)) of the idealized beam
     """
@@ -89,9 +90,41 @@ def idealizeBeam(elementLines):
             candidate = (init_point, end_point)
             if calcLength(candidate) > calcLength(idealBeam):
                 idealBeam = candidate
-    return idealBeam
+
+    # Round the nodes to 8 decimal points
+    # init_point = list(idealBeam[0])
+    # end_point = list(idealBeam[1])
+    # init_point = [round(number, 8) for number in init_point]
+    # end_point = [round(number, 8) for number in end_point]
+
+    key_n = str(round(idealBeam[0][2],2))
+    if key_n == '-0.0' : key_n = '0.0'
+
+    init_dist = calcLength((floor_nodes[key_n][0], idealBeam[0]))
+    end_dist = calcLength((floor_nodes[key_n][0], idealBeam[1]))
+
+    for node in floor_nodes[key_n]:
+        # Calculations for initial point
+        candidate_init_dist = calcLength((node, idealBeam[0]))
+        if candidate_init_dist <= init_dist:
+            init_dist = candidate_init_dist
+            init_point = node
+        # Calculations for end point
+        candidate_end_dist = calcLength((node, idealBeam[1]))
+        if candidate_end_dist <= end_dist:
+            end_dist = candidate_end_dist
+            end_point = node
+
+    return (init_point, end_point)
 
 def idealizeColumn(elementLines):
+    """Generates the idealized line for the given element (column), center-middle line in the vertical direction.
+
+    Args:
+        elementLines (list): List containing all the lines ((xi,yi,zi), (xj,yj,zj)) that define the element's geometry
+    Returns:
+        tuple: Sigle tuple with the line representing the idealized column ((xi,yi,zi), (xj,yj,zj))
+    """
     def calcAvgPoint(lines):
         x_avg, y_avg, z_avg = 0,0,0
         for line in lines:
@@ -101,7 +134,7 @@ def idealizeColumn(elementLines):
         x_avg /= len(lines)*2
         y_avg /= len(lines)*2
         z_avg /= len(lines)*2
-        return (x_avg, y_avg, z_avg)
+        return (round(x_avg, 8), round(y_avg, 8), round(z_avg, 8))
     zs = []
     interestingLines = []
     topLines = []
@@ -131,6 +164,13 @@ def abstract_elements_by_type(ifc_values):
         dict: Dictionary with lines for each element of the given type. key: UUID: XXXX Tag: XXXX
     """
     vertices, edges, elements = ifc_values['vertices'], ifc_values['edges'], ifc_values['elements']
+    for key in vertices:
+        # print(key)
+        # print(vertices[key])
+        vertices[key] = list(vertices[key])
+        vertices[key] = [round(vertices[key][i],8) for i in range(len(vertices[key]))]
+        vertices[key] = tuple(vertices[key])
+
     lines_for_type = {}
     for key in elements: # Loop through the keys of each element
         # Preprocessing
@@ -143,6 +183,13 @@ def abstract_elements_by_type(ifc_values):
     return lines_for_type
 
 def process_file(input_ifc_file_path, output_elem_filename, output_ideal_filename):
+    """Processes beams and columns in an IFC file and exports 3D elements (lines) and idelaized elements
+
+    Args:
+        input_ifc_file_path (str): Path either full or relative to the input IFC file
+        output_elem_filename (str): Path either full or relative to the output file for 3d elements
+        output_ideal_filename (str): Path either full or relative to the output file for idealized elements
+    """
     objectTypes = ["IfcBeam", "IfcColumn"]
     geometry = read_geom(input_ifc_file_path, objectTypes)
     ifc_beams = geometry["IfcBeam"]
@@ -155,16 +202,43 @@ def process_file(input_ifc_file_path, output_elem_filename, output_ideal_filenam
     f = open(output_ideal_filename, "w")
     f.close()
 
-    for key in beams: # Loop through the keys of each element
-        print(f"\n\n---------------- {key} ----------------")
-        # Exporting
-        writeLines(beams[key], output_elem_filename, "a")
-        idealBeam = [idealizeBeam(beams[key])] # Pass an element as an argument and gives back a line
-        writeLines(idealBeam, output_ideal_filename, "a")
+    idealColumns = []
     for key in columns:
         writeLines(columns[key], output_elem_filename, "a")
         idealColumn = [idealizeColumn(columns[key])]
+        idealColumns.append(idealColumn)
         writeLines(idealColumn, output_ideal_filename, "a")
+    
+    floor_nodes = {} # Dictionary containing the nodes in tuples for each floor, each floor in a list
+    floor_heights = [] # List containing the floor heights
+
+    for column in idealColumns:
+        if not column[0][0][2] in floor_heights:
+            floor_heights.append(column[0][0][2])
+        try:
+            if not column[0][0] in floor_nodes[str(column[0][0][2])]:
+                floor_nodes[str(column[0][0][2])].append(column[0][0])
+        except:
+            floor_nodes[str(column[0][0][2])] = []
+            floor_nodes[str(column[0][0][2])].append(column[0][0])
+        if not column[0][1][2] in floor_heights:
+            floor_heights.append(column[0][1][2])
+        try:
+            if not column[0][1] in floor_nodes[str(column[0][1][2])]:
+                floor_nodes[str(column[0][1][2])].append(column[0][1])
+        except:
+            floor_nodes[str(column[0][1][2])] = []
+            floor_nodes[str(column[0][1][2])].append(column[0][1])
+    
+    print(floor_nodes)
+        
+
+    for key in beams: # Loop through the keys of each element
+        # print(f"\n\n---------------- {key} ----------------")
+        # Exporting
+        writeLines(beams[key], output_elem_filename, "a")
+        idealBeam = [idealizeBeam(beams[key], floor_nodes)] # Pass an element as an argument and gives back a line
+        writeLines(idealBeam, output_ideal_filename, "a")
 
 if __name__ == "__main__":
-    process_file("../Example2.ifc", "3dModel.scr","IdealModel.scr")
+    process_file("../Example2_TrueCoords.ifc", "3dModel.scr","IdealModel.scr")
