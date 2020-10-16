@@ -2,7 +2,7 @@
 
 import ifcopenshell
 from ifcopenshell import geom
-import re
+from model2json import create_json
 
 
 def read_geom(ifc_path, ObjTypes):
@@ -182,13 +182,19 @@ def abstract_elements_by_type(ifc_values):
 
     return lines_for_type
 
-def process_file(input_ifc_file_path, output_elem_filename, output_ideal_filename):
+def process_file(input_ifc_file_path, output_elem_filename, output_ideal_filename, export_scr):
     """Processes beams and columns in an IFC file and exports 3D elements (lines) and idelaized elements
 
     Args:
         input_ifc_file_path (str): Path either full or relative to the input IFC file
         output_elem_filename (str): Path either full or relative to the output file for 3d elements
         output_ideal_filename (str): Path either full or relative to the output file for idealized elements
+        export_scr (bool): Whether to export or not lines to scr files
+    Returns:
+        floor_heights (dict): A list containing the elevation of each floor
+        floor_nodes (dict): A dictionary containing the coords for each node in every floor (key)
+        idealBeamsDict (dict): A dictionary with UUID and Tag for each beam element as key and its coords as values
+        idealColumnsDict (dict): A dictionary with UUID and Tag for each column element as key and its coords as values
     """
     objectTypes = ["IfcBeam", "IfcColumn"]
     geometry = read_geom(input_ifc_file_path, objectTypes)
@@ -197,17 +203,23 @@ def process_file(input_ifc_file_path, output_elem_filename, output_ideal_filenam
     beams = abstract_elements_by_type(ifc_beams)
     columns = abstract_elements_by_type(ifc_columns)
 
-    f = open(output_elem_filename, "w")
-    f.close()
-    f = open(output_ideal_filename, "w")
-    f.close()
+    if export_scr:
+        f = open(output_elem_filename, "w")
+        f.close()
+        f = open(output_ideal_filename, "w")
+        f.close()
 
     idealColumns = []
+    
+    idealColumnsDict = {}
+    idealBeamsDict = {}
+
     for key in columns:
-        writeLines(columns[key], output_elem_filename, "a")
+        if export_scr: writeLines(columns[key], output_elem_filename, "a")
         idealColumn = [idealizeColumn(columns[key])]
         idealColumns.append(idealColumn)
-        writeLines(idealColumn, output_ideal_filename, "a")
+        idealColumnsDict[key] = idealColumn
+        if export_scr: writeLines(idealColumn, output_ideal_filename, "a")
     
     floor_nodes = {} # Dictionary containing the nodes in tuples for each floor, each floor in a list
     floor_heights = [] # List containing the floor heights
@@ -228,17 +240,18 @@ def process_file(input_ifc_file_path, output_elem_filename, output_ideal_filenam
                 floor_nodes[str(column[0][1][2])].append(column[0][1])
         except:
             floor_nodes[str(column[0][1][2])] = []
-            floor_nodes[str(column[0][1][2])].append(column[0][1])
-    
-    print(floor_nodes)
-        
+            floor_nodes[str(column[0][1][2])].append(column[0][1])        
 
     for key in beams: # Loop through the keys of each element
         # print(f"\n\n---------------- {key} ----------------")
         # Exporting
-        writeLines(beams[key], output_elem_filename, "a")
+        if export_scr: writeLines(beams[key], output_elem_filename, "a")
         idealBeam = [idealizeBeam(beams[key], floor_nodes)] # Pass an element as an argument and gives back a line
-        writeLines(idealBeam, output_ideal_filename, "a")
+        idealBeamsDict[key] = idealBeam
+        if export_scr: writeLines(idealBeam, output_ideal_filename, "a")
+
+    return floor_heights, floor_nodes, idealBeamsDict, idealColumnsDict
 
 if __name__ == "__main__":
-    process_file("../Example2_TrueCoords.ifc", "3dModel.scr","IdealModel.scr")
+    floor_heights, floor_nodes, idealBeamsDict, idealColumnsDict = process_file("../Example2_TrueCoords.ifc", "3dModel.scr","IdealModel.scr", export_scr=False)
+    create_json(floor_heights, floor_nodes, idealBeamsDict, idealColumnsDict)
