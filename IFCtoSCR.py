@@ -243,7 +243,7 @@ def process_file(input_ifc_file_path, output_elem_filename, output_ideal_filenam
             floor_nodes[str(column[0][1][2])].append(column[0][1])        
 
     for key in beams: # Loop through the keys of each element
-        # print(f"\n\n---------------- {key} ----------------")
+        print(f"\n\n---------------- {key} ----------------")
         # Exporting
         if export_scr: writeLines(beams[key], output_elem_filename, "a")
         idealBeam = [idealizeBeam(beams[key], floor_nodes)] # Pass an element as an argument and gives back a line
