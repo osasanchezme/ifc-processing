@@ -1,4 +1,6 @@
-def create_json(floor_heights, floor_nodes, idealBeamsDict, idealColumnsDict):
+import re
+
+def create_json(floor_heights, floor_nodes, idealBeamsDict, idealColumnsDict, beamNamesDict, columnNamesDict):
     """Takes floor_nodes, ideal beams and ideal columns to generate a JSON file
 
     Args:
@@ -61,6 +63,41 @@ def create_json(floor_heights, floor_nodes, idealBeamsDict, idealColumnsDict):
                 found += 0.5
         columns[column] = (start_node, end_node)
 
+    # Get all the rectangular sections in the model
+    beam_rectangular_sections = {}
+    column_rectangular_sections = {}
+    beams_section = {}
+    columns_section = {}
+    beams_tag = {}
+    columns_tag = {}
+
+    for name in beamNamesDict:
+        abstraction = re.search(r"([\w -]*):([0-9]*) x ([0-9]*)(\w*):([0-9]*)",beamNamesDict[name])
+        if re.search(r".*Concrete.*Rect.*Beam",abstraction.group(1)):
+            key = 'CRB-' + abstraction.group(2) + 'x' + abstraction.group(3) + abstraction.group(4)
+            beam_rectangular_sections[key] = (abstraction.group(2), abstraction.group(3))
+            beams_section[name] = key
+            beams_tag[name] = abstraction.group(5)
+            # Add a try catch to be faster
+
+    for name in columnNamesDict:
+        abstraction = re.search(r"([\w -]*):([0-9]*) x ([0-9]*)(\w*):([0-9]*)",columnNamesDict[name])
+        if re.search(r".*Concrete.*Rect.*Column",abstraction.group(1)):
+            key = 'CRC-' + abstraction.group(2) + 'x' + abstraction.group(3) + abstraction.group(4)
+            column_rectangular_sections[key] = (abstraction.group(2), abstraction.group(3))
+            columns_section[name] = key
+            columns_tag[name] = abstraction.group(5)
+
     print(f"Nodes:\n{nodes}")
-    print(f"Columns:\n{columns}")
-    print(f"Beams:\n{beams}")
+    print(f"Beam rectangular sections:\n{beam_rectangular_sections}")
+    print(f"Column rectangular sections:\n{beam_rectangular_sections}")
+    
+    print(f"Columns' nodes:\n{columns}")
+    print(f"Columns' section:\n{columns_section}")
+    print(f"Columns' tag:\n{columns_tag}")
+    print(f"Beams' nodes:\n{beams}")
+    print(f"Beams' section:\n{beams_section}")
+    print(f"Beams' tag:\n{beams_tag}")
+    
+
+    # Watch the units problem
