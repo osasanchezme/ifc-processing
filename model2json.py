@@ -1,6 +1,7 @@
 import re
+import json
 
-def create_json(floor_heights, floor_nodes, idealBeamsDict, idealColumnsDict, beamNamesDict, columnNamesDict):
+def create_json(floor_heights, floor_nodes, idealBeamsDict, idealColumnsDict, beamNamesDict, columnNamesDict, jsonFile):
     """Takes floor_nodes, ideal beams and ideal columns to generate a JSON file
 
     Args:
@@ -88,16 +89,104 @@ def create_json(floor_heights, floor_nodes, idealBeamsDict, idealColumnsDict, be
             columns_section[name] = key
             columns_tag[name] = abstraction.group(5)
 
-    print(f"Nodes:\n{nodes}")
-    print(f"Beam rectangular sections:\n{beam_rectangular_sections}")
-    print(f"Column rectangular sections:\n{beam_rectangular_sections}")
+    # FEM.js like JSON exporting
+
+    myJSON = {}
+
+    myJSON["materials"] = {"Concrete":{"E":20.636e9, "G":7.692e9}} # In N / m2, E = 3900*sqrt(f'c) G = E / (2*(1+v))
+    myJSON["sections"] = {}
+    myJSON["joints"] = {}
+    myJSON["frames"] = {}
+    myJSON["supports"] = {}
+
+    # Sections in meters
+    conversion_factors = {
+        'mm': 1/1000,
+        'cm': 1/100,
+        'inch': 0.0254,
+        'ft': 0.3048,
+        'm': 1.0,
+    }
+    for section in beam_rectangular_sections:
+        name = section
+        units = re.search(r".*[0-9]*x[0-9]*(\w*)", name).group(1)
+        width = float(beam_rectangular_sections[section][0]) * conversion_factors[units]
+        height = float(beam_rectangular_sections[section][1]) * conversion_factors[units]
+        a = max([width, height])/2
+        b = min([width, height])/2
+        myJSON["sections"][name] = {
+            "area" : width * height,
+            "Ix" : a * b**3 * (16/3 - 3.36*(b/a)*(1-(b**4/(12*a**4)))),# J
+            "Iy" : width**3 * height / 12,
+            "Iz" : width * height**3 / 12,
+            "type" : "RectangularSection",
+            "width" : width,
+            "height" : height,
+        }
+
+    for section in column_rectangular_sections:
+        name = section
+        units = re.search(r".*[0-9]*x[0-9]*(\w*)", name).group(1)
+        width = float(column_rectangular_sections[section][0]) * conversion_factors[units]
+        height = float(column_rectangular_sections[section][1]) * conversion_factors[units]
+        a = max([width, height])/2
+        b = min([width, height])/2
+        myJSON["sections"][name] = {
+            "area" : width * height,
+            "Ix" : a * b**3 * (16/3 - 3.36*(b/a)*(1-(b**4/(12*a**4)))),# J
+            "Iy" : width**3 * height / 12,
+            "Iz" : width * height**3 / 12,
+            "type" : "RectangularSection",
+            "width" : width,
+            "height" : height,
+        }
+    for node in nodes:
+        myJSON["joints"][node] = {
+            "x" : nodes[node][0],
+            "y" : nodes[node][1],
+            "z" : nodes[node][2],
+        }
+        if 'N0' in node:
+            myJSON["supports"][node] = {
+                "ux": "true",
+                "uy": "true",
+                "uz": "true",
+                "rx": "true",
+                "ry": "true",
+                "rz": "true"
+            }
+
+    for beam in beams:
+        myJSON["frames"][beams_tag[beam]] = {
+            "j" : beams[beam][0],
+            "k" : beams[beam][1],
+            "material" : "Concrete", # Assigned by brute force
+            "section" : beams_section[beam],
+        }
     
-    print(f"Columns' nodes:\n{columns}")
-    print(f"Columns' section:\n{columns_section}")
-    print(f"Columns' tag:\n{columns_tag}")
-    print(f"Beams' nodes:\n{beams}")
-    print(f"Beams' section:\n{beams_section}")
-    print(f"Beams' tag:\n{beams_tag}")
+    for column in columns:
+        myJSON["frames"][columns_tag[column]] = {
+            "j" : columns[column][0],
+            "k" : columns[column][1],
+            "material" : "Concrete", # Assigned by brute force
+            "section" : columns_section[column],
+        }
+
+    with open(jsonFile, "w") as file:
+        json.dump(myJSON, file)
+        print(f"Successfully exported the file to {jsonFile}")
+
+    # print(myJSON)
+    # print(f"Nodes:\n{nodes}")
+    # print(f"Beam rectangular sections:\n{beam_rectangular_sections}")
+    # print(f"Column rectangular sections:\n{beam_rectangular_sections}")
+    
+    # print(f"Columns' nodes:\n{columns}")
+    # print(f"\n\nColumns' section:\n{columns_section}")
+    # print(f"\n\nColumns' tag:\n{columns_tag}")
+    # print(f"\n\nBeams' nodes:\n{beams}")
+    # print(f"\n\nBeams' section:\n{beams_section}")
+    # print(f"\n\nBeams' tag:\n{beams_tag}")
     
 
     # Watch the units problem

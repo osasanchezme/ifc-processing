@@ -17,11 +17,11 @@ ifc = ifcopenshell.open('../Example2_TrueCoords.ifc')
 #     print(f"{info[i]} {my_elem[i]}")
 # print(type(ifc.by_guid('124A5FBdX3d9FYqYfR6P$r'))) # And its class
 
-beams = ifc.by_type('IfcBeam')
-print(f"The model has {len(beams)} beams.") # Get the number of beams
-beam = beams[0] # Get the first beam
+# beams = ifc.by_type('IfcBeam')
+# print(f"The model has {len(beams)} beams.") # Get the number of beams
+# beam = beams[0] # Get the first beam
 # print(beam.id()) # Get the STEP ID. The # line in the ifc file where the element is written
-print(beam.Name) # The same as beam[2]
+# print(beam.Name) # The same as beam[2]
 # print(beam.GlobalId) # The same as beam[0]
 # print(beam.get_info()) # Get a dictionary with all the info of the element
 
@@ -33,3 +33,12 @@ print(beam.Name) # The same as beam[2]
 
 # print(ifc.traverse(beam)) # Get all the elements, our element is referencing. Meaning all the lines
 
+# material = ifc.by_type('IfcProduct')
+# material = ifc.by_type('IfcMaterial')
+# material = ifc.by_type('IfcBuildingStorey')
+# material = ifc.by_type('IfcBeam')
+# print(material[0].Material)
+# help(ifc.by_type)
+
+
+# Get storeys and material from the IFC file not using brute force

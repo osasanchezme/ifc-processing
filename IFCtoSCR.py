@@ -256,5 +256,5 @@ def process_file(input_ifc_file_path, output_elem_filename, output_ideal_filenam
     return floor_heights, floor_nodes, idealBeamsDict, idealColumnsDict, beam_names, column_names
 
 if __name__ == "__main__":
-    floor_heights, floor_nodes, idealBeamsDict, idealColumnsDict, beamNamesDict, columnNamesDict = process_file("../5_Floors_RectangularBeams.ifc", "3dModel.scr","IdealModel.scr", export_scr=False)
-    create_json(floor_heights, floor_nodes, idealBeamsDict, idealColumnsDict, beamNamesDict, columnNamesDict)
+    floor_heights, floor_nodes, idealBeamsDict, idealColumnsDict, beamNamesDict, columnNamesDict = process_file("5_Floors_RectangularBeams.ifc", "3dModel.scr","IdealModel.scr", export_scr=True)
+    create_json(floor_heights, floor_nodes, idealBeamsDict, idealColumnsDict, beamNamesDict, columnNamesDict, "5_Floors_RectangularBeams.json")
