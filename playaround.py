@@ -1,10 +1,10 @@
 # https://wiki.osarch.org/index.php?title=IfcOpenShell_code_examples
 
-# import ifcopenshell
-# import ifcopenshell.util
-# import ifcopenshell.util.element
+import ifcopenshell
+import ifcopenshell.util
+import ifcopenshell.util.element
 
-# ifc = ifcopenshell.open('../Example2_TrueCoords.ifc')
+ifc = ifcopenshell.open('../Example2_TrueCoords.ifc')
 
 # print(ifc.schema) # What is the schema of the file
 
@@ -33,3 +33,12 @@
 
 # print(ifc.traverse(beam)) # Get all the elements, our element is referencing. Meaning all the lines
 
+# material = ifc.by_type('IfcProduct')
+# material = ifc.by_type('IfcMaterial')
+# material = ifc.by_type('IfcBuildingStorey')
+# material = ifc.by_type('IfcBeam')
+# print(material[0].Material)
+# help(ifc.by_type)
+
+
+# Get storeys and material from the IFC file not using brute force
