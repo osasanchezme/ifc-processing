@@ -29,7 +29,7 @@ def read_geom(ifc_path, ObjTypes):
             shape = geom.create_shape(settings, ifc_entity) # Convert the ifc into a mesh
             ios_vertices[ifc_entity[0]] = shape.geometry.verts
             ios_edges[ifc_entity[0]] = shape.geometry.edges
-            ios_elements[ifc_entity[0]] = ifc_entity[7]
+            ios_elements[ifc_entity[0]] = ifc_entity.Name
         objects_geometry[ObjType] = {"vertices": ios_vertices, "edges": ios_edges , "elements": ios_elements}
     
     return objects_geometry
@@ -161,7 +161,8 @@ def abstract_elements_by_type(ifc_values):
         ifc_values (dict): Dictionary with points, edges and tags for each element.
 
     Returns:
-        dict: Dictionary with lines for each element of the given type. key: UUID: XXXX Tag: XXXX
+        lines_for_type (dict): Dictionary with lines for each element of the given type. key: UUID
+        elements_name (dict): Dictionary with the names for each element of the given type.
     """
     vertices, edges, elements = ifc_values['vertices'], ifc_values['edges'], ifc_values['elements']
     for key in vertices:
@@ -172,15 +173,17 @@ def abstract_elements_by_type(ifc_values):
         vertices[key] = tuple(vertices[key])
 
     lines_for_type = {}
+    elements_name = {}
     for key in elements: # Loop through the keys of each element
         # Preprocessing
         points = [ vertices[key][i*3:i*3+3] for i in range(len(vertices[key])//3) ]
         line_points = [ edges[key][i*2:i*2+2] for i in range(len(edges[key])//2) ] #List containing a tuple for each line with start and end points id
         line_points = list(set(line_points)) # The line vertices pointers are duplicated, delete duplicates
         lines = [ (points[line_points[i][0]], points[line_points[i][1]]) for i in range(len(line_points)) ] # List of tuples containing the xyz coords of the start and end point
-        lines_for_type["UUID: " + str(key) + " Tag:" + str(elements[key])] = lines
+        lines_for_type[key] = lines
+        elements_name[key] = elements[key]
 
-    return lines_for_type
+    return lines_for_type, elements_name
 
 def process_file(input_ifc_file_path, output_elem_filename, output_ideal_filename, export_scr):
     """Processes beams and columns in an IFC file and exports 3D elements (lines) and idelaized elements
@@ -200,8 +203,8 @@ def process_file(input_ifc_file_path, output_elem_filename, output_ideal_filenam
     geometry = read_geom(input_ifc_file_path, objectTypes)
     ifc_beams = geometry["IfcBeam"]
     ifc_columns = geometry["IfcColumn"]
-    beams = abstract_elements_by_type(ifc_beams)
-    columns = abstract_elements_by_type(ifc_columns)
+    beams, beam_names = abstract_elements_by_type(ifc_beams)
+    columns, column_names = abstract_elements_by_type(ifc_columns)
 
     if export_scr:
         f = open(output_elem_filename, "w")
@@ -250,8 +253,8 @@ def process_file(input_ifc_file_path, output_elem_filename, output_ideal_filenam
         idealBeamsDict[key] = idealBeam
         if export_scr: writeLines(idealBeam, output_ideal_filename, "a")
 
-    return floor_heights, floor_nodes, idealBeamsDict, idealColumnsDict
+    return floor_heights, floor_nodes, idealBeamsDict, idealColumnsDict, beam_names, column_names
 
 if __name__ == "__main__":
-    floor_heights, floor_nodes, idealBeamsDict, idealColumnsDict = process_file("../Example2_TrueCoords.ifc", "3dModel.scr","IdealModel.scr", export_scr=False)
-    create_json(floor_heights, floor_nodes, idealBeamsDict, idealColumnsDict)
+    floor_heights, floor_nodes, idealBeamsDict, idealColumnsDict, beamNamesDict, columnNamesDict = process_file("5_Floors_RectangularBeams.ifc", "3dModel.scr","IdealModel.scr", export_scr=True)
+    create_json(floor_heights, floor_nodes, idealBeamsDict, idealColumnsDict, beamNamesDict, columnNamesDict, "5_Floors_RectangularBeams.json")
