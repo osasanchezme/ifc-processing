@@ -1,3 +1,5 @@
+### Coded by: Oscar Sanchez. osasanchezme@unal.edu.co
+
 import re
 import json
 
@@ -174,7 +176,7 @@ def create_json(floor_heights, floor_nodes, idealBeamsDict, idealColumnsDict, be
 
     with open(jsonFile, "w") as file:
         json.dump(myJSON, file)
-        print(f"Successfully exported the file to {jsonFile}")
+        print(f"Successfully exported the model to {jsonFile}")
 
     # print(myJSON)
     # print(f"Nodes:\n{nodes}")
