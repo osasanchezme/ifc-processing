@@ -2,8 +2,6 @@
 
 import ifcopenshell
 from ifcopenshell import geom
-from model2json import create_json
-
 
 def read_geom(ifc_path, ObjTypes):
     """Function to read elements from a ifc file
@@ -31,7 +29,6 @@ def read_geom(ifc_path, ObjTypes):
             ios_edges[ifc_entity[0]] = shape.geometry.edges
             ios_elements[ifc_entity[0]] = ifc_entity.Name
         objects_geometry[ObjType] = {"vertices": ios_vertices, "edges": ios_edges , "elements": ios_elements}
-    
     return objects_geometry
 
 def writeLines(lines, file_name, mode = "w"):
@@ -52,7 +49,7 @@ def writeLines(lines, file_name, mode = "w"):
             f.write(p_str)
         f.write("zoom a\n")
         f.close()
-    print(f"Successfully exported the lines to: {file_name}")
+    # print(f"Successfully exported the lines to: {file_name}")
 
 def idealizeBeam(elementLines, floor_nodes):
     """Generates the idealized line for the given element (beam), top-middle line in the longest direction. Works only for horizontal beams
@@ -166,8 +163,6 @@ def abstract_elements_by_type(ifc_values):
     """
     vertices, edges, elements = ifc_values['vertices'], ifc_values['edges'], ifc_values['elements']
     for key in vertices:
-        # print(key)
-        # print(vertices[key])
         vertices[key] = list(vertices[key])
         vertices[key] = [round(vertices[key][i],8) for i in range(len(vertices[key]))]
         vertices[key] = tuple(vertices[key])
@@ -223,6 +218,9 @@ def process_file(input_ifc_file_path, output_elem_filename, output_ideal_filenam
         idealColumns.append(idealColumn)
         idealColumnsDict[key] = idealColumn
         if export_scr: writeLines(idealColumn, output_ideal_filename, "a")
+    if export_scr:
+        print(f"Succesfully exported columns to {output_elem_filename}")
+        print(f"Succesfully exported columns to {output_ideal_filename}")
     
     floor_nodes = {} # Dictionary containing the nodes in tuples for each floor, each floor in a list
     floor_heights = [] # List containing the floor heights
@@ -246,15 +244,13 @@ def process_file(input_ifc_file_path, output_elem_filename, output_ideal_filenam
             floor_nodes[str(column[0][1][2])].append(column[0][1])        
 
     for key in beams: # Loop through the keys of each element
-        # print(f"\n\n---------------- {key} ----------------")
         # Exporting
         if export_scr: writeLines(beams[key], output_elem_filename, "a")
         idealBeam = [idealizeBeam(beams[key], floor_nodes)] # Pass an element as an argument and gives back a line
         idealBeamsDict[key] = idealBeam
         if export_scr: writeLines(idealBeam, output_ideal_filename, "a")
+    if export_scr:
+        print(f"Succesfully exported beams to {output_elem_filename}")
+        print(f"Succesfully exported beams to {output_ideal_filename}")
 
     return floor_heights, floor_nodes, idealBeamsDict, idealColumnsDict, beam_names, column_names
-
-if __name__ == "__main__":
-    floor_heights, floor_nodes, idealBeamsDict, idealColumnsDict, beamNamesDict, columnNamesDict = process_file("5_Floors_RectangularBeams.ifc", "3dModel.scr","IdealModel.scr", export_scr=True)
-    create_json(floor_heights, floor_nodes, idealBeamsDict, idealColumnsDict, beamNamesDict, columnNamesDict, "5_Floors_RectangularBeams.json")
