@@ -70,6 +70,36 @@ def idealizeBeam(elementLines, floor_nodes):
         z_mid = (line[0][2] + line[1][2])/2
         return (x_mid, y_mid, z_mid)
 
+    # Working here - say if the given line lies in the same plane of the given face
+    def isSamePlane(face, line):
+        if len(face) < 2:
+            return True
+        else:
+            three_points = face[0:2]
+
+
+    def findAllFaces(elementLines):
+        duplicated_elem_lines = []
+        for line in elementLines:
+            duplicated_elem_lines.extend([line,line])
+        faces = []
+        current_line = duplicated_elem_lines.pop()
+        face = [current_line]
+        while len(duplicated_elem_lines) > 0:
+            i = 0
+            while i <= len(duplicated_elem_lines):
+                if current_line != duplicated_elem_lines[i] and (current_line[0] in duplicated_elem_lines[i] or current_line[1] in duplicated_elem_lines[i]):
+                    current_line = duplicated_elem_lines.pop(i)
+                    face.append(current_line)
+                    i = 0
+                else:
+                    i = i + 1
+            faces.append(face)
+
+    findAllFaces(elementLines)
+
+    # print(elementLines)
+
     zs = []
     topLines = []
     for line in elementLines:
